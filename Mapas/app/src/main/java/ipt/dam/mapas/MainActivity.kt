@@ -10,6 +10,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import org.osmdroid.views.MapView
 import android.Manifest
+import android.content.Context
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Handler
 import android.os.Looper
 import org.osmdroid.config.Configuration
@@ -19,10 +23,15 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.compass.CompassOverlay
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), LocationListener {
 
     private val REQUEST_PERMISSIONS_REQUEST_CODE = 1
     private lateinit var map : MapView
+
+    private lateinit var locationManager: LocationManager
+    private val locationPermissionCode = 2
+
+    private lateinit var startMarker:Marker
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         compassOverlay.enableCompass()
         map.overlays.add(compassOverlay)
         var point = GeoPoint(39.60068, -8.38967)
-        var startMarker = Marker(map)
+        startMarker = Marker(map)
         startMarker.position = point
         startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         startMarker.infoWindow = MarkerWindow(map, this)
@@ -64,6 +73,13 @@ class MainActivity : AppCompatActivity() {
         Handler(Looper.getMainLooper()).postDelayed({
             map.controller.setCenter(point)
         }, 1000) // espera 1 Segundo para centrar o mapa
+
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if ((ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            requestPermissions( arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), locationPermissionCode)
+        }
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, this)
 
     } // onCreate
 
@@ -81,6 +97,12 @@ class MainActivity : AppCompatActivity() {
                 permissionsToRequest.toArray(arrayOf<String>()),
                 REQUEST_PERMISSIONS_REQUEST_CODE);
         }
+    }
+
+    override fun onLocationChanged(p: Location) {
+        var point = GeoPoint(p.latitude , p.longitude)
+        startMarker.position = point
+        map.controller.setCenter(point)
     }
 
 }
